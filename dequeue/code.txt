@@ -1,0 +1,560 @@
+#include<GL/freeglut.h>
+#include<math.h>
+#include<cmath>
+#include<iostream>
+#include<string.h>
+
+using namespace std;
+int qcap, kkey = 32, front = 0, rear = 0, linp = 0, len[50], j = 0;
+bool disp = false, dque = false, ins = false, del = false, go = false, instime = false, deltime = false, inr = false, inf = false, dr = false, df = false;
+float x, y, p = 100, q = 8, r = 120, s = -8, a = -20, b = 1000, c = 19.65, d, posfront, posrear;
+char inp[100], qu[1000][1000];
+
+void dequeue();
+void display();
+void insertrear();
+void insertfront();
+void deletefront();
+void deleterear();
+void init()
+{
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void margine(float p, float q, float r, float s)
+{
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(p, q);
+	glVertex2f(p, s);
+	glVertex2f(r, s);
+	glVertex2f(r, q);
+	glEnd();
+}
+
+void reshape(int w, int h)
+{
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(-100, 100, -100, 100);
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void draw_poly(float a, float b, float c, float d)
+{
+	glBegin(GL_POLYGON);
+	glVertex2f(a, b);
+	glVertex2f(a, d);
+	glVertex2f(c, d);
+	glVertex2f(c, b);
+	glEnd();
+}
+
+void mouse(int button, int state, int mousex, int mousey)
+{
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	{
+		x = (float(mousex) - 500) / 5;
+		y = (700 - float(mousey) - 350) / 3.5;
+	}
+	if (disp == true)
+	{
+	
+		if (x >= -40 && x <= 40 && y >= -15 && y <= 0)
+		{
+			disp = false;
+			dque = true;
+			glutDisplayFunc(dequeue);
+		}
+	}
+	
+	if (dque == true)
+	{
+		draw_poly(-75, -60, -45, -75);//if
+		draw_poly(-35, -60, -5, -75);//df
+		draw_poly(5, -60, 35, -75);//ir
+		draw_poly(45, -60, 75, -75);//dr
+		if (x >= -75 && x <= -45 && y >= -75 && y <= -60)
+		{
+			inf = true;
+		}
+		else if (x >= -35 && x <= -5 && y >= -75 && y <= -60)
+		{
+			df = true;
+		}
+		else if (x >= 5 && x <= 35 && y >= -75 && y <= -60)
+		{
+			inr = true;
+		}
+		else if (x >= 45 && x <= 75 && y >= -75 && y <= -60)
+		{
+			dr = true;
+		}
+		else if (inr == true || inf == true)
+		{
+			if (x >= 23 && x <= 32 && y >= 40 && y <= 50)
+			{
+				go = true;
+			}
+		}
+	}
+	glutPostRedisplay();
+}
+
+void keyboard(unsigned char key, int x, int y)
+{
+	kkey = (int)key;
+	if (dque == true)
+	{
+		if (ins == true || inr == true || inf == true)
+		{
+			if (isdigit(key) || key == '-')
+			{
+				inp[linp] = char(kkey);
+				linp++;
+			}
+			else if (kkey == 8)
+			{
+				inp[--linp] = '\0';
+			}
+		}
+	}
+	glutPostRedisplay();
+}
+
+void printtext(const char s[], float x, float y, int l)
+{
+	glRasterPos2i(x, y);
+	for (int i = 0; i < l; i++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, s[i]);
+	}
+}
+
+void print_front(int x)
+{
+	glLineWidth(3);
+	glBegin(GL_LINES);
+	glVertex2f(x + 10, -10);
+	glVertex2f(x + 10, -16);
+	glVertex2f(x + 10, -10);
+	glVertex2f(x + 8, -12);
+	glVertex2f(x + 10, -10);
+	glVertex2f(x + 12, -12);
+	glEnd();
+	glLineWidth(1);
+	printtext("FRONT", x + 4, -21, 5);
+	printtext("FRONT = ", 50, 60, 8);
+	if (front == -1)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, 45);
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, 49);
+	}
+	else
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, front + 48);
+	}
+}
+
+void print_rear(int x)
+{
+	glLineWidth(3);
+	glBegin(GL_LINES);
+	glVertex2f(x + 10, 10);
+	glVertex2f(x + 10, 16);
+	glVertex2f(x + 10, 10);
+	glVertex2f(x + 8, 12);
+	glVertex2f(x + 10, 10);
+	glVertex2f(x + 12, 12);
+	glEnd();
+	glLineWidth(1);
+	printtext("REAR", x + 5, 17, 4);
+	printtext("REAR = ", 50, 50, 7);
+	if (rear == -1)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, 45);
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, 49);
+	}
+	else
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, rear + 48);
+	}
+}
+
+void timer1(int)
+{
+	if (instime == true)
+	{
+		glutPostRedisplay();
+		glutTimerFunc(1000 / 60, timer1, 0);
+		if (r > (20 + posrear))
+		{
+			r -= 1;
+			p = r - 20;
+		}
+		else
+		{
+			instime = false;
+			return;
+		}
+	}
+}
+
+void timer2(int)
+{
+	if (deltime == true)
+	{
+		glutPostRedisplay();
+		glutTimerFunc(1000 / 60, timer2, 0);
+		if (r > -100)
+		{
+			r -= 1;
+			p = r - 20;
+		}
+		else
+		{
+			deltime = false;
+			return;
+		}
+	}
+}
+
+void timer3(int)
+{
+	if (deltime == true)
+	{
+		glutPostRedisplay();
+		glutTimerFunc(1000 / 60, timer3, 0);
+		if (r < 119)
+		{
+			r += 1;
+			p = r - 20;
+		}
+		else
+		{
+			deltime = false;
+			return;
+		}
+	}
+}
+
+void timer4(int)
+{
+	if (instime == true)
+	{
+		glutPostRedisplay();
+		glutTimerFunc(1000 / 60, timer4, 0);
+		if (r < (posfront))
+		{
+			r += 1;
+			p = r - 20;
+		}
+		else
+		{
+			instime = false;
+			return;
+		}
+	}
+}
+
+void insertrear()
+{
+	if (rear == qcap)
+	{
+		printtext("QUEUE IS FULL", -14, 30, 13);
+		inr = false;
+	}
+	else
+	{
+		draw_poly(-20, 50, 20, 40);
+		glColor3f(0, 0, 1);
+		printtext("Enter the Element : ", -18, 43, 20);
+		glColor3f(1, 1, 1);
+		draw_poly(23, 50, 32, 40);
+		glColor3f(0, 0, 1);
+		printtext("GO", 25, 43, 2);
+		printtext(inp, 13, 43, linp);
+		glColor3f(0, 0, 1);
+		if (go == true)
+		{
+			glColor3f(0, 0, 0);
+			draw_poly(-20, 50, 32, 40);
+			glColor3f(0, 0, 1);
+			draw_poly(p, q, r, s);
+			glColor3f(1, 1, 1);
+			printtext(inp, p + 6, q - 8, linp);
+			glColor3f(0, 0, 1);
+			if (instime == false)
+			{
+				instime = true;
+				timer1(0);
+			}
+			if (r <= (20 + posrear))
+			{
+				strcpy_s(qu[rear++], inp);
+				len[rear - 1] = linp;
+				linp = 0;
+				strcpy_s(inp, "");
+				instime = false;
+				go = false;
+				inr = false;
+				p = 100;
+				r = 120;
+				glutPostRedisplay();
+			}
+		}
+	}
+	glColor3f(1, 1, 1);
+}
+
+void deleterear()
+{
+	if (front == rear)
+	{
+		printtext("QUEUE IS EMPTY", -14, 30, 14);
+		dr = false;
+	}
+	else
+	{
+		glColor3f(0, 0, 0);
+		draw_poly(posrear - 20, 8, posrear - 0.2, -8 + 0.2);
+		glColor3f(0, 0, 1);
+		draw_poly(p, q, r, s);
+		glColor3f(1, 1, 1);
+		printtext(qu[rear - 1], p + 6, q - 8, len[rear - 1]);
+		glColor3f(0, 0, 1);
+		if (p == 100)
+		{
+			p = posrear - 20;
+			r = p + 20;
+		}
+		if (deltime == false)
+		{
+			deltime = true;
+			timer3(0);
+		}
+		if (r >= 119)
+		{
+			rear--;
+			deltime = false;
+			dr = false;
+			p = 100;
+			r = 120;
+			glutPostRedisplay();
+		}
+	}
+	glColor3f(1, 1, 1);
+}
+
+void insertfront()
+{
+	if (front == 0)
+	{
+		printtext("QUEUE IS FULL", -14, 30, 13);
+		inf = false;
+	}
+	else
+	{
+		draw_poly(-20, 50, 20, 40);
+		glColor3f(0, 0, 1);
+		printtext("Enter the Element : ", -18, 43, 20);
+		glColor3f(1, 1, 1);
+		draw_poly(23, 50, 32, 40);
+		glColor3f(0, 0, 1);
+		printtext("GO", 25, 43, 2);
+		printtext(inp, 13, 43, linp);
+		glColor3f(0, 0, 1);
+		if (go == true)
+		{
+			glColor3f(0, 0, 0);
+			draw_poly(-20, 50, 32, 40);
+			glColor3f(0, 0, 1);
+			if (p == 100)
+			{
+				p = -120;
+				r = p + 20;
+			}
+			draw_poly(p, q, r, s);
+			glColor3f(1, 1, 1);
+			printtext(inp, p + 6, q - 8, linp);
+			glColor3f(0, 0, 1);
+			if (instime == false)
+			{
+				instime = true;
+				timer4(0);
+			}
+			if (r >= (posfront))
+			{
+				strcpy_s(qu[front - 1], inp);
+				len[front - 1] = linp;
+				front--;
+				linp = 0;
+				strcpy_s(inp, "");
+				instime = false;
+				go = false;
+				inf = false;
+				p = 100;
+				r = 120;
+				glutPostRedisplay();
+			}
+		}
+		glColor3f(1, 1, 1);
+	}
+}
+
+void deletefront()
+{
+	if (front == rear)
+	{
+		printtext("QUEUE IS EMPTY", -14, 30, 14);
+		df = false;
+	}
+	else
+	{
+		glColor3f(0, 0, 0);
+		draw_poly(posfront, 8, posfront + 20 - 0.2, -8 + 0.2);
+		glColor3f(0, 0, 1);
+		draw_poly(p, q, r, s);
+		glColor3f(1, 1, 1);
+		printtext(qu[front], p + 6, q - 8, len[front]);
+		glColor3f(0, 0, 1);
+		if (p == 100)
+		{
+			p = posfront;
+			r = p + 20;
+		}
+		if (deltime == false)
+		{
+			deltime = true;
+			timer2(0);
+		}
+		if (r <= -100)
+		{
+			front++;
+			deltime = false;
+			df = false;
+			p = 100;
+			r = 120;
+			glutPostRedisplay();
+		}
+	}
+	if (front == qcap && rear == qcap)
+		front = rear = 0;
+	glColor3f(1, 1, 1);
+}
+
+
+void queueinit()
+{
+	init();
+	glBegin(GL_LINES);
+	glVertex2f(0 - 20 * qcap / 2, 8);
+	glVertex2f(0 + 20 * qcap / 2, 8);
+	glVertex2f(0 - 20 * qcap / 2, -8);
+	glVertex2f(0 + 20 * qcap / 2, -8);
+	for (int i = 0 - 20 * qcap / 2; i <= 0 + 20 * qcap / 2; i += 20)
+	{
+		glVertex2f(i, 8);
+		glVertex2f(i, -8);
+	}
+	if(front!=rear)
+	{
+		draw_poly(posfront,8,posfront+20,-8);
+		glColor3f(1,1,1);
+		printtext(qu[j], posfront+6, 0, len[j]);
+		j++;
+	}
+	//int
+	for(int i=posfront;i<posrear;i+=20,j++)
+	{
+		glColor3f(0,0,1);
+		draw_poly(i,8,i+20-0.2,-8+0.2);
+		glColor3f(1,1,1);
+		printtext(qu[j], i+6, 0, len[j]);
+	}
+	posfront = -20 * qcap / 2 + (front * 20); posrear = -20 * qcap / 2 + (rear * 20);
+	j = front; float i = posfront;
+	while (i < (posrear))
+	{
+		glColor3f(0, 0, 1);
+		draw_poly(posfront, 8, posfront + 20 - 0.2, -8 + 0.2);
+		glColor3f(1, 1, 1);
+		printtext(qu[front], posfront + 7, 0, len[front]);
+		glColor3f(0, 0, 1);
+		draw_poly(i, 8, i + 20 - 0.2, -8 + 0.2);
+		glColor3f(1, 1, 1);
+		printtext(qu[j], i + 7, 0, len[j]);
+		j++;
+		i += 20;
+	}
+	glBegin(GL_LINES);
+	glVertex2f(-20 * qcap / 2, 8);
+	glVertex2f(-20 * qcap / 2, -8);
+	j = front;
+	glEnd();
+	margine(-94, 94, 94, -94);
+	glColor3f(0, 0, 1);
+	print_front(posfront);
+	print_rear(posrear);
+	glColor3f(1, 1, 1);
+}
+
+void dequeue()
+{
+	queueinit();
+	draw_poly(-75, -60, -45, -75);
+	draw_poly(-35, -60, -5, -75);
+	draw_poly(5, -60, 35, -75);
+	draw_poly(45, -60, 75, -75);
+	glColor3f(0, 0, 1);
+	printtext("INSERT FRONT", -73, -70, 12);
+	printtext("DELETE FRONT", -33, -70, 12);
+	printtext("INSERT REAR", 8, -70, 12);
+	printtext("DELETE REAR", 48, -70, 12);
+	glColor3f(1, 1, 1);
+	if (inr == true)
+	{
+		insertrear();
+	}
+	else if (dr == true)
+	{
+		deleterear();
+	}
+	else if (inf == true)
+	{
+		insertfront();
+	}
+	else if (df == true)
+	{
+		deletefront();
+	}
+	glutSwapBuffers();
+}
+
+void display()
+{
+	disp = true;
+	margine(-94, 94, 94, -94);
+	draw_poly(-40, 0, 40, -15);
+	glColor3f(0, 0, 1);
+	printtext("DEQUEUE IMPLEMENTATION", -26.5, -10, 22);
+	glColor3f(1, 1, 1);
+	glutSwapBuffers();
+}
+
+int main(int argc, char** argv)
+{
+	cout << "Enter the maximum capacity of double ended queue : ";
+	cin >> qcap;
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGB| GLUT_DOUBLE|GLUT_DEPTH);
+	glutInitWindowPosition(10, 10);
+	glutInitWindowSize(1000, 700);
+	glutCreateWindow("DOUBLE ENDED QUEUE Implementation");
+	glutDisplayFunc(display);
+	glutReshapeFunc(reshape);
+	glutKeyboardFunc(keyboard);
+	glutMouseFunc(mouse);
+	glutMainLoop();
+}
